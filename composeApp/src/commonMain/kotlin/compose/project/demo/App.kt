@@ -3,9 +3,12 @@ package compose.project.demo
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -28,11 +31,30 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+data class Country(val name: String, val zone: TimeZone)
+
+fun currentTimeAt(location: String, zone: TimeZone): String {
+    fun LocalTime.formatted() = "$hour:$minute:$second"
+
+    val time = Clock.System.now()
+    val localTime = time.toLocalDateTime(zone).time
+
+    return "The time in $location is ${localTime.formatted()}"
+}
+
+fun countries() = listOf(
+    Country("Japan", TimeZone.of("Asia/Tokyo")),
+    Country("France", TimeZone.of("Europe/Paris")),
+    Country("Mexico", TimeZone.of("America/Mexico_City")),
+    Country("Indonesia", TimeZone.of("Asia/Jakarta")),
+    Country("Egypt", TimeZone.of("Africa/Cairo")),
+)
+
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
-        var location by remember { mutableStateOf("Europe/Paris") }
+        var showCountries by remember { mutableStateOf(false) }
         var timeAtLocation by remember { mutableStateOf("No location selected") }
 
         Column {
@@ -42,26 +64,29 @@ fun App() {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().align(Alignment.CenterHorizontally)
             )
-            TextField(
-                value = location,
-                onValueChange = { location = it })
-            Button(modifier = Modifier.padding(top = 10.dp),
-                onClick = { timeAtLocation = currentTimeAt(location) ?: "Invalid Location" }) {
-                Text("Show Time At Location")
+
+            Row(modifier = Modifier.padding(start = 20.dp, top = 10.dp)) {
+                DropdownMenu(
+                    expanded = showCountries,
+                    onDismissRequest = { showCountries = false }
+                ) {
+                    countries().forEach { (name, zone) ->
+                        DropdownMenuItem(
+                            onClick = {
+                                timeAtLocation = currentTimeAt(name, zone)
+                                showCountries = false
+                            }
+                        ) {
+                            Text(name)
+                        }
+                    }
+                }
+            }
+            
+            Button(modifier = Modifier.padding(start = 20.dp, top = 10.dp),
+                onClick = { showCountries = !showCountries }) {
+                Text("Select Location")
             }
         }
-    }
-}
-
-fun currentTimeAt(location: String): String? {
-    fun LocalTime.formatted() = "$hour:$minute:$second"
-
-    return try {
-        val time = Clock.System.now()
-        val zone = TimeZone.of(location)
-        val localTime = time.toLocalDateTime(zone).time
-        "The time in $location is ${localTime.formatted()}"
-    } catch (ex: IllegalTimeZoneException) {
-        null
     }
 }
